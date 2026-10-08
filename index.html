@@ -102,8 +102,14 @@ function item(){
   ${R?`<div class="row"><button class="p" id="mic">🎤 Record</button><button id="sk">Skip</button></div><div class="mu" id="heard"></div>`:`<p class="mu">Speech recognition isn't available in this browser, so type what you would say instead (or use Chrome/Edge).</p><input class="t" id="ty" placeholder="Type your sentence"><div class="row"><button class="p" id="ck">Check</button></div>`}<div id="fb"></div></div>${nxt}`;$("#app").innerHTML=h;
   const grade=alts=>{const s=Math.max(...alts.map(a=>sc(a,it.T)));const ok=s>=it.th;$("#heard").textContent="I heard: “"+alts[0]+"” · match "+Math.round(s*100)+"%";if(ok)fin(true,"Great pronunciation and wording!");else{it.tries++;const f=$("#fb");f.className="fb bad";f.innerHTML="Not quite ("+Math.round(s*100)+"% match). Try again"+(it.tries>=2?". Model: “"+(it.model||it.T[0])+"”":".")}};
   if(R){$("#sk").onclick=()=>{if(!locked)fin(false,"Skipped. Model: “"+(it.model||it.T[0])+"”")};
-   $("#mic").onclick=()=>{if(locked)return;const r=new R();r.lang="en-US";r.maxAlternatives=3;const m=$("#mic");m.textContent="🔴 Listening…";m.disabled=true;
-    r.onresult=e=>grade([...e.results[0]].map(a=>a.transcript));r.onerror=e=>{$("#heard").textContent="Microphone problem ("+e.error+"). Check browser permissions and try again."};r.onend=()=>{m.textContent="🎤 Record";m.disabled=false};try{r.start()}catch(x){m.disabled=false}}}
+   const typed=()=>{if($("#ty"))return;const d=document.createElement("div");d.innerHTML='<p class="mu">The microphone is not available here, so type your answer instead.</p><input class="t" id="ty" placeholder="Type your sentence"><div class="row"><button class="p" id="ck">Check</button></div>';$("#heard").after(d);$("#ck").onclick=()=>{if(locked)return;const s=sc($("#ty").value,it.T),ok=s>=it.th;fin(ok,ok?"Good!":"Model: “"+(it.model||it.T[0])+"”")}};
+   const MSG={"not-allowed":"Microphone permission was blocked. Allow it in your browser's address bar, or type your answer below.","service-not-allowed":"Speech recognition is blocked in this page or browser.","audio-capture":"No microphone was found.","network":"Speech recognition needs an internet connection.","no-speech":"I didn't hear anything. Check your microphone and try again.","aborted":""};
+   $("#mic").onclick=()=>{if(locked)return;try{speechSynthesis.cancel()}catch(x){}const m=$("#mic");const reset=()=>{m.textContent="🎤 Record";m.disabled=false};
+    let r;try{r=new R()}catch(x){$("#heard").textContent="Speech recognition could not start.";typed();return}
+    r.lang="en-US";r.maxAlternatives=3;r.continuous=false;m.textContent="🔴 Listening…";m.disabled=true;
+    r.onresult=e=>{try{grade([...e.results[0]].map(a=>a.transcript))}catch(x){}};
+    r.onerror=e=>{$("#heard").textContent=MSG[e.error]!=null?MSG[e.error]:"Microphone problem ("+e.error+").";if(["not-allowed","service-not-allowed","audio-capture","network"].includes(e.error))typed()};
+    r.onend=reset;try{r.start()}catch(x){reset();$("#heard").textContent="Could not start the microphone.";typed()}}}
   else{$("#ck").onclick=()=>{if(locked)return;const v=$("#ty").value;const s=sc(v,it.T);const ok=s>=it.th;fin(ok,ok?"Good!":"Model: “"+(it.model||it.T[0])+"”")}}}
 }
 function done(){const p=Math.round(right/Q.length*100);prog[L]=Math.max(prog[L]||0,p);save();const pass=p>=70;
